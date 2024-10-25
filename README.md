@@ -1,0 +1,1 @@
+This GitHub repository contains the R Markdown file and associated inputs which enables the regeneration of the main and supplementary figures as well as the supplementary tables presented in the manuscript 'Gut microbiota profiling in injection drug users with and without HIV-1 infection in Puerto Rico" published in the journal 'Frontiers in Microbiology'. 
