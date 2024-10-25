@@ -1,0 +1,1168 @@
+---
+title: "gut_microbiota_profiling_HIV_drug_users"
+author: "Nirosh D. Aluthge"
+date: "10/23/2024"
+output: html_document
+---
+
+## Introduction
+
+This R Markdown document contains the 16S rRNA data analysis steps used to generate the results described in the manuscript 'Gut microbiota profiling in injection drug users with and without HIV-1 infection in Puerto Rico' published in the journal 'Frontiers in Microbiology'.
+
+## set the path to the root directory of preference
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/Users/niroshaluthge/Desktop/NDA/NIH_microbiome_study/')
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the required R packages
+
+```{r, echo=TRUE}
+library(dada2); packageVersion("dada2") # 1.24.0
+library(phyloseq); packageVersion("phyloseq") # 1.40.0
+library(ggplot2); packageVersion("ggplot2") # 3.4.1
+library(genefilter);packageVersion("genefilter") # 1.78.0
+library(MicrobiotaProcess); packageVersion('MicrobiotaProcess') # 1.82.0
+library(vegan); packageVersion('vegan') # 2.6.4
+library(DESeq2); packageVersion("DESeq2") # 1.36.0
+library(microbiome); packageVersion('microbiome') # 1.18.0
+library(VennDiagram); packageVersion("VennDiagram") # 1.7.3
+library(UpSetR); packageVersion("UpSetR") # 1.4.0
+library(tidyverse); packageVersion("tidyverse") # 2.0.0
+```
+
+## Data analysis pipeline
+
+Read-in main phyloseq object
+
+```{r, echo=TRUE}
+NIH_micro_ps <- readRDS("NIH_micro_ps.rds")
+NIH_micro_ps # should have 202 samples and 6858 ASVs
+```
+
+Filtering out ASVs that are classified in the kingdoms 'Archaea' or 'Eukaryota' as well as those ASVs that have a Mitochondrial classification :
+
+```{r, echo=TRUE}
+remov_kingdoms <- c('Archaea', 'Eukaryota')
+NIH_micro_taxa_filtered_ps <- subset_taxa(NIH_micro_ps, !Kingdom %in% remov_kingdoms & (Family != 'Mitochondria' | is.na(Family))) 
+NIH_micro_taxa_filtered_ps
+NIH_micro_taxa_filtered_ps <- subset_taxa(NIH_micro_taxa_filtered_ps, Kingdom == 'Bacteria')
+NIH_micro_taxa_filtered_ps # only ASVs classified as 'Bacteria' remain - 6787 ASVs 
+```
+
+Remove cyanobacterial ASVs except those belonging to the class 'Melainobacteria' (thought to be of gut origin; non-photosynthetic)
+
+```{r, echo=TRUE}
+cyano_ps <- subset_taxa(NIH_micro_taxa_filtered_ps, Phylum == "Cyanobacteria")
+cyano_ps # 30 Cyanobacterial ASVs identified
+
+remov_cyano_ps <- subset_taxa(cyano_ps, Class != "Melainabacteria" | is.na(Class)) # Keep only Melainabacteria (also remove any cyano ASVs with 'NA' as class)
+cyano_to_remove <- taxa_names(remov_cyano_ps) # apparently, no melainabacteria are present in these samples
+
+# filtering out the Cyanobacteria 
+all_taxa <- taxa_names(NIH_micro_taxa_filtered_ps)
+good_taxa <- all_taxa[!(all_taxa %in% cyano_to_remove)]
+good_taxa
+
+NIH_micro_taxa_filtered_no_cyano <- prune_taxa(good_taxa,NIH_micro_taxa_filtered_ps)
+NIH_micro_taxa_filtered_no_cyano # 6757 ASVs remain 
+```
+
+Removing negative controls:
+
+```{r, echo=TRUE}
+NIH_micro_taxa_filtered_no_cyano_no_neg <- subset_samples(NIH_micro_taxa_filtered_no_cyano, Well_type != 'NC')
+NIH_micro_taxa_filtered_no_cyano_no_neg # 183 samples remain
+```
+Remove positive controls
+
+```{r, echo=TRUE}
+pos_conts <- c('297', '327', '171', '172', '173')
+NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos <- subset_samples(NIH_micro_taxa_filtered_no_cyano_no_neg, !PrimerNumber %in% pos_conts)
+NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos # 178 samples
+```
+
+Filtering potential contaminant/erroneous sequences using thresholds described by Tom et al.(J Dairy Sci.2024 Jun 28:S0022-0302(24)00961-5.doi: 10.3168/jds.2023-24479)
+
+```{r, echo=TRUE}
+# Need to convert to a relative abundance table
+NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos.prop <- transform_sample_counts(NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos, function (otu) otu/sum(otu))
+NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos.prop
+
+# set criteria for filter function
+flist <- filterfun(kOverA(2,0.0015)) # criteria are at least 0.15% abundance in at least 2 samples
+
+# find out which taxa need to be filtered based on these criteria
+taxa.to.filter <- filter_taxa(NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos.prop, flist) #create a list of ASVs that meet flist criteria
+str(taxa.to.filter)
+
+NIH_study_complete_filtered_ps.prop <- prune_taxa(taxa.to.filter,NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos.prop)
+NIH_study_complete_filtered_ps.prop # 806 taxa remain after applying the criteria - 5951 were filtered out
+
+NIH_study_complete_filtered_ps <- prune_taxa(taxa_names(NIH_study_complete_filtered_ps.prop),NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos)
+
+sum(otu_table(NIH_study_complete_filtered_ps))/sum(otu_table(NIH_micro_taxa_filtered_no_cyano_no_neg_no_pos)) # ~94.2% of reads remain
+```
+
+Read depth information:
+
+```{r, echo=TRUE}
+reads_per_sample_df <- data.frame(Reads = sample_sums(NIH_study_complete_filtered_ps)) 
+reads_per_sample_df$sampleID <- rownames(reads_per_sample_df)
+View(reads_per_sample_df)
+reads_per_sample_df <- reads_per_sample_df[,c(2,1)] # reorder columns
+reads_per_sample_df_sorted <- reads_per_sample_df[order(reads_per_sample_df$Reads),] # order samples by read count (ascending)
+View(reads_per_sample_df_sorted)
+
+min_read_depth <- min(sample_sums(NIH_study_complete_filtered_ps))
+min_read_depth # 2 reads
+max_read_depth <- max(sample_sums(NIH_study_complete_filtered_ps))
+max_read_depth # 365,291
+avg_read_depth <- sum(otu_table(NIH_study_complete_filtered_ps))/nsamples(NIH_study_complete_filtered_ps)
+avg_read_depth # ~93,175/sample
+```
+
+Filtering out Samples with < 25,000 reads
+
+```{r, echo=TRUE}
+NIH_micro_main_ps <- prune_samples(!sample_sums(NIH_study_complete_filtered_ps) < 25000, NIH_study_complete_filtered_ps)
+NIH_micro_main_ps # 168 samples and 806 ASVs - 10 samples were removed
+saveRDS(NIH_micro_main_ps, 'NIH_micro_main_ps.rds')
+NIH_micro_main_ps <- readRDS('NIH_micro_main_ps.rds')
+sum(otu_table(NIH_micro_main_ps))/nsamples(NIH_micro_main_ps) # 97,858 average read depth
+```
+
+
+**Alpha Diversity**
+
+```{r, echo=TRUE}
+# Rarefy to even depth
+NIH_micro_main_ps.rare <- rarefy_even_depth(NIH_micro_main_ps, sample.size = min(sample_sums(NIH_micro_main_ps)), rngseed = 1, replace = T, trimOTUs = T, verbose = T)
+
+## Using Shannon index
+results_shannon = estimate_richness(NIH_micro_main_ps, measures = "Shannon")
+results_shannon_df <- as.data.frame(results_shannon)
+results_shannon_df$PrimerNumber <- rownames(results_shannon_df)
+results_shannon_df <- results_shannon_df[c(2,1)]
+View(results_shannon_df)
+
+NIH_metadata <- as(sample_data(NIH_micro_main_ps.rare), "data.frame")
+alpha_div_df <- merge(results_shannon_df,NIH_metadata, by = "PrimerNumber")
+View(alpha_div_df)
+
+alpha_div_df <- merge(results_shannon_df,NIH_metadata, by = "PrimerNumber")
+View(alpha_div_df)
+
+theme_set(theme_gray())
+p1 <- ggplot(alpha_div_df, aes(x=Desc, y=Shannon, fill=Desc)) + geom_boxplot() + scale_fill_manual(values = c("red", "dark green", "blue", "orange"))
+p1 # Corresponds to 'Figure 1' of manuscript
+
+# Looking at statistical significance 
+d = sample_data(NIH_micro_main_ps)
+
+# Calculate stats using Wilcoxon test
+HIV_injecting = results_shannon[d[,'Desc'] == 'HIV_injecting',]
+HIV_not_injecting = results_shannon[d[,'Desc'] == 'HIV_not_injecting',]
+no_HIV_injecting = results_shannon[d[,'Desc'] == 'no_HIV_injecting',]
+no_HIV_not_injecting = results_shannon[d[,'Desc'] == 'no_HIV_not_injecting',]
+
+wilcox.test(HIV_injecting, HIV_not_injecting)
+wilcox.test(HIV_injecting, no_HIV_injecting)
+wilcox.test(no_HIV_injecting, HIV_not_injecting)
+wilcox.test(HIV_injecting, no_HIV_not_injecting)
+wilcox.test(no_HIV_injecting, no_HIV_not_injecting)
+wilcox.test(HIV_not_injecting, no_HIV_not_injecting)
+```
+
+
+**Beta diversity**
+
+```{r, echo=TRUE}
+# Transform ASV table to relative abundances
+NIH_micro_main_ps.prop <- transform_sample_counts(NIH_micro_main_ps, function (OTU) OTU/sum(OTU))
+NIH_micro_main_ps.prop
+head(NIH_micro_main_ps.prop@otu_table) # check that the transformation is correct
+
+# Replace long ASV sequences with shorter ASV IDs
+taxa_names(NIH_micro_main_ps.prop) <- paste0("ASV_", seq(ntaxa(NIH_micro_main_ps.prop)))
+
+# Generating PCoA plots using the 'MicrobiotaProcess' package
+
+# Unweighted UniFrac distances
+pcoares <- get_pcoa(obj=NIH_micro_main_ps.prop, distmethod="unifrac", weighted=FALSE, method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Desc"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "dark green", "blue", "orange")) +
+            scale_fill_manual(values=c("red", "dark green", "blue", "orange"))
+pcoaplot1 # Corresponds to 'Figure 2(a)'
+
+
+# Bray-Curtis distances
+pcoares <- get_pcoa(obj=NIH_micro_main_ps.prop, distmethod="bray", method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Desc"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "dark green", "blue", "orange")) +
+            scale_fill_manual(values=c("red", "dark green", "blue", "orange"))
+pcoaplot1 # Corresponds to 'Figure 2(b)'
+```
+
+
+performing PERMANOVA:
+
+```{r, echo=TRUE}
+metadata <- as(sample_data(NIH_micro_main_ps.prop), "data.frame") 
+metadata[["Injecting_status"]] <- as.factor(metadata[["Injecting_status"]])
+metadata[["HIV_status"]] <- as.factor(metadata[["HIV_status"]])
+metadata[["Desc"]] <- as.factor(metadata[["Desc"]])
+
+adonis(phyloseq::distance(NIH_micro_main_ps.prop, method = "unifrac", weighted = F) ~ Desc, data=metadata, permutations = 999)
+
+adonis2(phyloseq::distance(NIH_micro_main_ps.prop, method = "bray") ~ Desc, data=metadata, permutations = 999)
+
+# Function for performing paurwise permanova
+pairwise_permanova <- function(physeq,treatment,method) {
+    metadata <- as(sample_data(physeq), "data.frame")
+    metadata[[treatment]] <- as.factor(metadata[[treatment]])
+    cbn <- combn(x = levels(metadata[[treatment]]), m = 2)
+    ncol(cbn)
+    print(1:ncol(cbn))
+    results <- list()
+    for (i in 1:ncol(cbn)) {
+       print(i)
+       print(cbn[,i])
+       cbn1 <- cbn[,i]
+       ids1 = as.character(get_variable(physeq, treatment)) == cbn1[1] #& as.character(get_variable(physeq, "Species")) == cbn1[2]  
+       ids2 = as.character(get_variable(physeq, treatment)) == cbn1[2] 
+       ps1 <- prune_samples(ids1, physeq)
+       ps2 <- prune_samples(ids2, physeq)
+       ps <- merge_phyloseq(ps1,ps2)
+       #print(nsamples(ps))
+       metadata_new <- as(sample_data(ps), "data.frame")
+       #result <- adonis(phyloseq::distance(ps, method = method, na.rm = TRUE) ~ metadata_new[[treatment]])  #Species, data = metadata_new
+       result <- adonis2(phyloseq::distance(ps, method = method, weighted = FALSE) ~ metadata_new[[treatment]])
+       results[[i]] <- result
+    }
+    return(results)
+}
+
+# For unweighted UniFrac
+pairwise_result <- pairwise_permanova(NIH_micro_main_ps.prop, "Desc", "unifrac")
+pairwise_result
+
+# For Bray-Curtis
+pairwise_result <- pairwise_permanova(NIH_micro_main_ps.prop, "Desc", "bray")
+pairwise_result
+```
+
+
+**Differentially abundant ASVs between 'HIV_injecting' group and others**
+
+```{r, echo=TRUE}
+## Differentially abundant ASVs 'HIV_injecting' vs 'no_HIV_injecting' group
+NIH_micro_main_ps
+taxa_names(NIH_micro_main_ps) <- paste0("ASV_", seq(ntaxa(NIH_micro_main_ps)))
+NIH_micro_HIV_inj_no_HIV_inj_ps <- subset_samples(NIH_micro_main_ps, (Desc == "HIV_injecting" | Desc == "no_HIV_injecting"))
+NIH_micro_HIV_inj_no_HIV_inj_ps
+head(taxa_names(NIH_micro_HIV_inj_no_HIV_inj_ps))
+
+# Performing DESeq2 comparisons
+sample_data(NIH_micro_HIV_inj_no_HIV_inj_ps)$Desc <- factor(sample_data(NIH_micro_HIV_inj_no_HIV_inj_ps)$Desc, levels = c("HIV_injecting", "no_HIV_injecting")) # specifying reference level
+diagadds = phyloseq_to_deseq2(NIH_micro_HIV_inj_no_HIV_inj_ps, ~Desc)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+res_DESeq2 # prints DESeq2 output - use to confirm reference levels
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_HIV_inj_vs_no_HIV_inj <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_HIV_inj_no_HIV_inj_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_HIV_inj_vs_no_HIV_inj$ASV_ID <- rownames(sigtab_0.05_HIV_inj_vs_no_HIV_inj)
+sigtab_0.05_HIV_inj_vs_no_HIV_inj <- sigtab_0.05_HIV_inj_vs_no_HIV_inj[, c(14,1:13)]
+View(sigtab_0.05_HIV_inj_vs_no_HIV_inj) # 40 differential ASVs - contains the data for supplementary table S3
+
+diff_abund_HIV_inj_no_HIV_inj <- sigtab_0.05_HIV_inj_vs_no_HIV_inj$ASV_ID
+
+# prepare dataframe so that the last taxonomic level with a classification is associated with ASV_ID
+new_df <- data.frame(t(sigtab_0.05_HIV_inj_vs_no_HIV_inj)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p1 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("red","blue"), labels = c("HIV_injecting", "no_HIV_injecting")) +
+  xlab("ASV") + labs(fill = "Group") + theme(axis.text.x = element_text(size = 10))
+p1 # Corresponds to Figure 3(A)
+
+
+## Differentially abundant ASVs 'HIV_injecting' vs 'HIV_not_injecting' group
+NIH_micro_HIV_inj_HIV_not_inj_ps <- subset_samples(NIH_micro_main_ps, (Desc == "HIV_injecting" | Desc == "HIV_not_injecting"))
+NIH_micro_HIV_inj_HIV_not_inj_ps
+
+# performing DESeq comparisons
+diagadds = phyloseq_to_deseq2(NIH_micro_HIV_inj_HIV_not_inj_ps, ~Desc)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+print(res_DESeq2)
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_HIV_inj_vs_HIV_not_inj <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_HIV_inj_HIV_not_inj_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_HIV_inj_vs_HIV_not_inj$ASV_ID <- rownames(sigtab_0.05_HIV_inj_vs_HIV_not_inj)
+sigtab_0.05_HIV_inj_vs_HIV_not_inj <- sigtab_0.05_HIV_inj_vs_HIV_not_inj[, c(14,1:13)]
+View(sigtab_0.05_HIV_inj_vs_HIV_not_inj) # 49 differential ASVs - contains data for supplementary table S4
+
+diff_abund_HIV_inj_HIV_not_inj <- sigtab_0.05_HIV_inj_vs_HIV_not_inj$ASV_ID
+
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_HIV_inj_vs_HIV_not_inj)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p2 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("red","dark green"), labels = c("HIV_injecting", "HIV_not_injecting")) +
+  xlab("ASV") + labs(fill = "Group")
+p2 # Corresponds to Figure 3(B)
+
+
+## Differentially abundant ASVs 'HIV_injecting' vs 'no_HIV_not_injecting' group
+NIH_micro_HIV_inj_no_HIV_not_inj_ps <- subset_samples(NIH_micro_main_ps, (Desc == "HIV_injecting" | Desc == "no_HIV_not_injecting"))
+NIH_micro_HIV_inj_no_HIV_not_inj_ps
+
+# performing DESeq comparisons
+diagadds = phyloseq_to_deseq2(NIH_micro_HIV_inj_no_HIV_not_inj_ps, ~Desc)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+print(res_DESeq2)
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_HIV_inj_vs_no_HIV_not_inj <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_HIV_inj_no_HIV_not_inj_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_HIV_inj_vs_no_HIV_not_inj$ASV_ID <- rownames(sigtab_0.05_HIV_inj_vs_no_HIV_not_inj)
+sigtab_0.05_HIV_inj_vs_no_HIV_not_inj <- sigtab_0.05_HIV_inj_vs_no_HIV_not_inj[, c(14,1:13)]
+View(sigtab_0.05_HIV_inj_vs_no_HIV_not_inj) # 44 differential ASVs - contains data for supplementary table S5
+
+diff_abund_HIV_inj_no_HIV_not_inj <- sigtab_0.05_HIV_inj_vs_no_HIV_not_inj$ASV_ID
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_HIV_inj_vs_no_HIV_not_inj)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p3 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("red","orange"), labels = c("HIV_injecting", "no_HIV_not_injecting")) +
+  xlab("ASV") + labs(fill = "Group")
+p3 # Corresponds to Figure 3(C)
+```
+
+
+## Differential Abundance Analysis - HIV status and Injector status ##
+
+** HIV status **
+
+```{r, echo=TRUE}
+# DESeq2 comparison of HIV-positive vs HIV-negative samples
+diagadds = phyloseq_to_deseq2(NIH_micro_main_ps, ~HIV_status)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+print(res_DESeq2)
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_HIV_pos_vs_HIV_neg <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_main_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_HIV_pos_vs_HIV_neg$ASV_ID <- rownames(sigtab_0.05_HIV_pos_vs_HIV_neg)
+sigtab_0.05_HIV_pos_vs_HIV_neg <- sigtab_0.05_HIV_pos_vs_HIV_neg[, c(14,1:13)]
+View(sigtab_0.05_HIV_pos_vs_HIV_neg) # 20 differential ASVs - contaims data for supplementary table S6
+
+diff_abund_HIV_status <- sigtab_0.05_HIV_pos_vs_HIV_neg$ASV_ID
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_HIV_pos_vs_HIV_neg)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p4 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("green", "dark red"), labels = c("HIV_negative", "HIV_positive")) +
+  xlab("ASV") + labs(fill = "HIV Status")
+p4 # Corresponds to Figure 4(A)
+```
+
+
+** Injecting status **
+
+```{r, echo=TRUE}
+# DESeq2 comparison of Injector vs Non-injector samples
+diagadds = phyloseq_to_deseq2(NIH_micro_main_ps, ~Injecting_status)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+print(res_DESeq2)
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_injectors_vs_non_injectors <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_main_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_injectors_vs_non_injectors$ASV_ID <- rownames(sigtab_0.05_injectors_vs_non_injectors)
+sigtab_0.05_injectors_vs_non_injectors <- sigtab_0.05_injectors_vs_non_injectors[, c(14,1:13)]
+View(sigtab_0.05_injectors_vs_non_injectors) # 22 differential ASVs - contains data for supplementary table S7
+
+diff_abund_inj_status <- sigtab_0.05_injectors_vs_non_injectors$ASV_ID
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_injectors_vs_non_injectors)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p5 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("red", "dark green"), labels = c("Injector", "Non-injector")) +
+  xlab("ASV") + labs(fill = "Injector Status")
+p5 # Corresponds to Figure 4(B)
+```
+
+
+## Core microbiome analysis ##
+
+Concentrating on core ASVs within each treatment
+
+```{r, echo=TRUE}
+
+## cores are determined within each group based on detection at a min of 0.01% rel. abundance and prevalence in 50% of samples
+
+# for HIV_injecting group
+NIH_micro_HIV_inject_ps <- subset_samples(NIH_micro_main_ps, Desc == "HIV_injecting") # 15 samples
+
+# make relative abundance table
+NIH_micro_HIV_inject_ps.prop <- transform_sample_counts(NIH_micro_HIV_inject_ps, function(otu) {otu/sum(otu)})
+head(View(NIH_micro_HIV_inject_ps.prop@otu_table)) # check that the numbers are proportions
+
+# identify core
+HIV_injecting_core_taxa <- core_members(NIH_micro_HIV_inject_ps.prop, detection = 0.0001, prevalence = 50/100) # 44 ASVs
+
+# only retain core taxa
+core_HIV_injecting_ps <- prune_taxa(HIV_injecting_core_taxa, NIH_micro_HIV_inject_ps)
+
+sum(otu_table(core_HIV_injecting_ps))/sum(otu_table(NIH_micro_HIV_inject_ps)) # 51.6% of reads
+
+tax <- as(phyloseq::tax_table(core_HIV_injecting_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "HIV_injecting_core_ASVs.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S8 of supplementary materials
+
+
+# for no_HIV_injecting group
+NIH_micro_no_HIV_inject_ps <- subset_samples(NIH_micro_main_ps, Desc == "no_HIV_injecting") # 65 samples
+
+# make relative abundance table
+NIH_micro_no_HIV_inject_ps.prop <- transform_sample_counts(NIH_micro_no_HIV_inject_ps, function(otu) {otu/sum(otu)})
+View(NIH_micro_no_HIV_inject_ps.prop@otu_table)
+
+# identify the core taxa
+no_HIV_injecting_core_taxa <- core_members(NIH_micro_no_HIV_inject_ps.prop, detection = 0.0001, prevalence = 50/100) # 69 ASVs
+
+# retain only the core taxa
+core_no_HIV_injecting_ps <- prune_taxa(no_HIV_injecting_core_taxa, NIH_micro_no_HIV_inject_ps)
+
+sum(otu_table(core_no_HIV_injecting_ps))/sum(otu_table(NIH_micro_no_HIV_inject_ps)) # 61.5% of reads
+
+tax <- as(phyloseq::tax_table(core_no_HIV_injecting_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "no_HIV_injecting_core_ASVs.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S10 of supplementary materials
+
+
+# for HIV_not_injecting group
+NIH_micro_HIV_not_inject_ps <- subset_samples(NIH_micro_main_ps, Desc == "HIV_not_injecting") # 74 samples
+
+# making a relative abundance table
+NIH_micro_HIV_not_inject_ps.prop <- transform_sample_counts(NIH_micro_HIV_not_inject_ps, function(otu) {otu/sum(otu)})
+View(NIH_micro_HIV_not_inject_ps.prop@otu_table)
+
+# identify the core taxa
+HIV_not_injecting_core_taxa <- core_members(NIH_micro_HIV_not_inject_ps.prop, detection = 0.0001, prevalence = 50/100) # 54 ASVs
+
+core_HIV_not_injecting_ps <- prune_taxa(HIV_not_injecting_core_taxa, NIH_micro_HIV_not_inject_ps)
+
+sum(otu_table(core_HIV_not_injecting_ps))/sum(otu_table(NIH_micro_HIV_not_inject_ps)) # 50.4% of reads
+
+tax <- as(phyloseq::tax_table(core_HIV_not_injecting_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "HIV_not_injecting_core_ASVs.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S9 of supplementary materials
+
+
+# for no_HIV_not_injecting group
+NIH_micro_no_HIV_not_inject_ps <- subset_samples(NIH_micro_main_ps, Desc == "no_HIV_not_injecting") # 14 samples
+
+# make relative abundance table
+NIH_micro_no_HIV_not_inject_ps.prop <- transform_sample_counts(NIH_micro_no_HIV_not_inject_ps, function(otu) {otu/sum(otu)})
+
+# identify the core taxa
+no_HIV_not_injecting_core_taxa <- core_members(NIH_micro_no_HIV_not_inject_ps.prop, detection = 0.0001, prevalence = 50/100) # 70 ASVs
+
+# retain only the core taxa
+core_no_HIV_not_injecting_ps <- prune_taxa(no_HIV_not_injecting_core_taxa, NIH_micro_no_HIV_not_inject_ps)
+
+sum(otu_table(core_no_HIV_not_injecting_ps))/sum(otu_table(NIH_micro_no_HIV_not_inject_ps)) # 65.1% of reads
+
+tax <- as(phyloseq::tax_table(core_no_HIV_not_injecting_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "no_HIV_not_injecting_core_ASVs.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S11 of supplementary materials 
+
+
+## What taxa are common to all cores?
+common_core_taxa <- Reduce(intersect, list(HIV_injecting_core_taxa, no_HIV_injecting_core_taxa, HIV_not_injecting_core_taxa, no_HIV_not_injecting_core_taxa)) # 33 common core taxa
+
+common_core_taxa_ps <- prune_taxa(common_core_taxa, NIH_micro_main_ps)
+
+sum(otu_table(common_core_taxa_ps))/sum(otu_table(NIH_micro_main_ps)) # ~39%
+```
+
+
+# Removing common core from group cores 
+
+```{r, echo=TRUE}
+# for HIV_injecting group
+HIV_injecting_core_without_common_core_taxa <- setdiff(HIV_injecting_core_taxa,common_core_taxa)
+
+# getting the taxonomy of these common core taxa
+HIV_injecting_core_without_common_core_taxa_ps <- prune_taxa(HIV_injecting_core_without_common_core_taxa, NIH_micro_main_ps)
+tax <- as(phyloseq::tax_table(HIV_injecting_core_without_common_core_taxa_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "HIV_injecting_core_without_common_core.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S13 of supplementary materials
+
+
+# for no_HIV_injecting group
+no_HIV_injecting_core_without_common_core_taxa <- setdiff(no_HIV_injecting_core_taxa,common_core_taxa)
+
+## getting the taxonomy of these common core taxa
+no_HIV_injecting_core_without_common_core_taxa_ps <- prune_taxa(no_HIV_injecting_core_without_common_core_taxa, NIH_micro_main_ps)
+tax <- as(phyloseq::tax_table(no_HIV_injecting_core_without_common_core_taxa_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "no_HIV_injecting_core_without_common_core.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S14 of supplementary materials
+
+
+# for HIV_not_injecting group
+HIV_not_injecting_core_without_common_core_taxa <- setdiff(HIV_not_injecting_core_taxa,common_core_taxa)
+
+## getting the taxonomy of these common core taxa
+HIV_not_injecting_core_without_common_core_taxa_ps <- prune_taxa(HIV_not_injecting_core_without_common_core_taxa, NIH_micro_main_ps)
+tax <- as(phyloseq::tax_table(HIV_not_injecting_core_without_common_core_taxa_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "HIV_not_injecting_core_without_common_core.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S15 of supplementary materials
+
+
+# for no_HIV_not_injecting group
+no_HIV_not_injecting_core_without_common_core_taxa <- setdiff(no_HIV_not_injecting_core_taxa,common_core_taxa)
+
+## getting the taxonomy of these common core taxa
+no_HIV_not_injecting_core_without_common_core_taxa_ps <- prune_taxa(no_HIV_not_injecting_core_without_common_core_taxa, NIH_micro_main_ps)
+tax <- as(phyloseq::tax_table(no_HIV_not_injecting_core_without_common_core_taxa_ps), "matrix")
+tax_cols <- colnames(tax)
+tax <- as.data.frame(tax)
+tax$taxonomy <- do.call(paste, c(tax[tax_cols], sep = ";"))
+for(co in tax_cols) tax[co] <- NULL
+write.table(tax, "no_HIV_not_injecting_core_without_common_core.txt", quote = FALSE, col.names = FALSE, sep = "\t") # Contains the information for generating table S16 of supplementary materials
+```
+
+**Beta diversity with core ASVs**
+
+```{r, echo=TRUE}
+## Getting the overall core
+overall_core <- unique(c(HIV_injecting_core_taxa, no_HIV_injecting_core_taxa, HIV_not_injecting_core_taxa, no_HIV_not_injecting_core_taxa))
+str(overall_core) # 98 taxa in overall core
+
+NIH_micro_main_ps_core.prop <- prune_taxa(overall_core, NIH_micro_main_ps.prop)
+NIH_micro_core_ps <- prune_taxa(overall_core, NIH_micro_main_ps)
+
+sum(otu_table(NIH_micro_core_ps))/sum(otu_table(NIH_micro_main_ps)) # overall core consisits of 64.8% of total reads
+
+
+## Making plots with the core
+
+pcoares <- get_pcoa(obj=NIH_micro_main_ps_core.prop, distmethod="bray", method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Desc"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "dark green", "blue", "orange")) +
+            scale_fill_manual(values=c("red", "dark green", "blue", "orange"))
+pcoaplot1 # Corresponds to 'Figure 5(A)' of manuscript
+
+pcoares <- get_pcoa(obj=NIH_micro_main_ps_core.prop, distmethod="unifrac", weighted=FALSE, method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Desc"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "dark green", "blue", "orange")) +
+            scale_fill_manual(values=c("red", "dark green", "blue", "orange"))
+pcoaplot1 # Corresponds 'Supplementary Figure 1(A)'
+
+
+# PCoA plots after removing the 33 common core ASVs
+
+allTaxa <- taxa_names(NIH_micro_main_ps)
+noncoretaxa <- allTaxa[!(allTaxa %in% common_core_taxa)] 
+
+core_removed.ps.prop <- prune_taxa(noncoretaxa, NIH_micro_main_ps.prop)
+
+pcoares <- get_pcoa(obj=core_removed.ps.prop, distmethod="bray", method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Desc"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "dark green", "blue", "orange")) +
+            scale_fill_manual(values=c("red", "dark green", "blue", "orange"))
+pcoaplot1 # Corresponds to 'Figure 5(B)'
+
+
+pcoares <- get_pcoa(obj=core_removed.ps.prop, distmethod="unifrac", weighted=FALSE, method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Desc"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "dark green", "blue", "orange")) +
+            scale_fill_manual(values=c("red", "dark green", "blue", "orange"))
+pcoaplot1 # Corresponds 'Supplementary Figure 1(B)'
+```
+
+
+## Making UpSet plots ##
+
+```{r, echo=TRUE}
+# For overall ASVs
+NIH_micro_main_ps
+upsetda <- get_upset(obj=NIH_micro_main_ps, factorNames="Desc")
+upsset_1 <- upset(upsetda, sets=unique(as.vector(sample_data(NIH_micro_main_ps)$Desc)), matrix.color = "#1F77B4",
+      sets.bar.color = c("dark green", "blue", "red", "orange"),
+      #,"gray83", "#C05830", "#5A3E87", "#F2CE46","blue","orange"),
+      order.by = "freq",
+      empty.intersections = "on")
+upsset_1 # Corresponds to 'Figure 5(c)' in manuscript
+
+
+## For the core ASVs
+otu_table_core_1 <- as(otu_table(core_HIV_injecting_ps), 'matrix')
+otu_table_core_2 <- as(otu_table(core_HIV_not_injecting_ps), 'matrix')
+otu_table_core_3 <- as(otu_table(core_no_HIV_injecting_ps), 'matrix')
+otu_table_core_4 <- as(otu_table(core_no_HIV_not_injecting_ps), 'matrix')
+
+overall_core_tables <- mergeSequenceTables(otu_table_core_1, otu_table_core_2, otu_table_core_3, otu_table_core_4, repeats = "Sum")
+
+ps_core <- phyloseq(otu_table(overall_core_tables, taxa_are_rows = FALSE), sample_data(NIH_micro_all_mapping_file))
+
+upsetda_core <- get_upset(obj=ps_core, factorNames="Desc")
+View(upsetda_core)
+upsset_core <- upset(upsetda_core, sets=unique(as.vector(sample_data(ps_core)$Desc)), matrix.color = "#1F77B4",
+      sets.bar.color = c("orange", "blue", "dark green", "red"),
+      #,"gray83", "#C05830", "#5A3E87", "#F2CE46","blue","orange"),
+      order.by = "freq",
+      empty.intersections = "on",
+      nintersects = 12)
+upsset_core # Corresponds to 'Figure 5(D)'
+```
+
+## Analysis based on drug categories ##
+
+```{r, echo=TRUE}
+## new mapping file was made with added column. need to make a new ps object with this as the new mapping file
+NIH_micro_all_mapping_file <- read.table("NIH_all_sets_mapping_file.txt", sep = "\t", header = TRUE, comment.char = "")
+row.names(NIH_micro_all_mapping_file) <- as.character(NIH_micro_all_mapping_file[,1])
+View(NIH_micro_all_mapping_file)
+
+NIH_micro_main_ps.new <- phyloseq(otu_table(otu_table(NIH_micro_main_ps)), sample_data(NIH_micro_all_mapping_file), phyloseq::tax_table(phyloseq::tax_table(NIH_micro_main_ps)), phy_tree(phy_tree(NIH_micro_main_ps)))
+View(NIH_micro_main_ps.new@sam_data)
+
+## Unweighted UniFrac distances
+NIH_micro_main_ps.new.prop <- transform_sample_counts(NIH_micro_main_ps.new, function (OTU) OTU/sum(OTU))
+
+pcoares <- get_pcoa(obj=NIH_micro_main_ps.new.prop, distmethod="unifrac", weighted=FALSE, method=NULL)
+
+# Visualizing the result
+pcoaplot1 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Drug_usage"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "green", "light blue", "purple")) +
+            scale_fill_manual(values=c("red", "green", "light blue", "purple"))
+pcoaplot1 # Corresponds to 'Figure 6(a)' in manuscript
+
+
+## Bray-Curtis distances
+pcoares <- get_pcoa(obj=NIH_micro_main_ps.new.prop, distmethod="bray", method=NULL)
+
+# Visualizing the result
+pcoaplot2 <- ggordpoint(obj=pcoares, biplot=TRUE, speciesannot=TRUE,
+                       factorNames=c("Drug_usage"), ellipse=TRUE) +
+            scale_color_manual(values=c("red", "green", "light blue", "purple")) +
+            scale_fill_manual(values=c("red", "green", "light blue", "purple"))
+pcoaplot2 # Corresponds to 'Figure 6(b)' in manuscript
+
+
+## PERMANOVA analysis to see if there is community structuring based on drug usage category
+metadata <- as(sample_data(NIH_micro_main_ps.new.prop), "data.frame") 
+metadata[["Injecting_status"]] <- as.factor(metadata[["Injecting_status"]])
+metadata[["HIV_status"]] <- as.factor(metadata[["HIV_status"]])
+metadata[["Desc"]] <- as.factor(metadata[["Desc"]])
+metadata[["Drug_usage"]] <- as.factor(metadata[["Drug_usage"]])
+
+permanova_1 <- adonis(phyloseq::distance(NIH_micro_main_ps.new.prop, method = "unifrac", weighted = F) ~ Injecting_status + HIV_status + Drug_usage, data=metadata, permutations = 999)
+permanova_1
+
+adonis(phyloseq::distance(NIH_micro_main_ps.prop, method = "unifrac", weighted = F) ~ Desc, data=metadata, permutations = 999)
+
+permanova_2 <- adonis(phyloseq::distance(NIH_micro_main_ps.new.prop, method = "bray") ~ Injecting_status + HIV_status + Drug_usage, data=metadata, permutations = 999)
+permanova_2
+```
+
+
+## Differential abundance based on drug usage
+
+```{r, echo=TRUE}
+NIH_micro_main_ps.new
+
+### Differentially abundant ASVs 'none' vs 'single' groups
+NIH_micro_HIV_none_vs_single_drugs_ps <- subset_samples(NIH_micro_main_ps.new, (Drug_usage == "none" | Drug_usage == "single"))
+NIH_micro_HIV_none_vs_single_drugs_ps # 89 samples
+
+# DESeq2 comparison of no drugs vs single drug samples
+diagadds = phyloseq_to_deseq2(NIH_micro_HIV_none_vs_single_drugs_ps, ~Drug_usage)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_none_vs_single <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_main_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_none_vs_single$ASV_ID <- rownames(sigtab_0.05_none_vs_single)
+sigtab_0.05_none_vs_single <- sigtab_0.05_none_vs_single[, c(14,1:13)]
+View(sigtab_0.05_none_vs_single) # 7 differential ASVs
+write.table(sigtab_0.05_none_vs_single, "sigtab_0.05_none_vs_single_drugs.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = F) # Contains data for supplementary table S19
+
+diff_abund_none_vs_single_drugs <- sigtab_0.05_none_vs_single$ASV_ID
+
+
+## Make bar plot
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_none_vs_single)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p1 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("light blue","purple"), labels = c("none", "single")) +
+  xlab("ASV") + labs(fill = "Drug usage")
+p1 # Corresponds to 'Figure 7(A)' in manuscript
+
+
+### Differentially abundant ASVs 'none' vs 'multiple' groups
+NIH_micro_HIV_none_vs_multiple_drugs_ps <- subset_samples(NIH_micro_main_ps.new, (Drug_usage == "none" | Drug_usage == "multiple"))
+NIH_micro_HIV_none_vs_multiple_drugs_ps # 116 samples
+
+# DESeq2 comparison of no drugs vs multiple drug samples
+diagadds = phyloseq_to_deseq2(NIH_micro_HIV_none_vs_multiple_drugs_ps, ~Drug_usage)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+print(res_DESeq2) # can check which categories were compared
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_none_vs_multiple <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_main_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_none_vs_multiple$ASV_ID <- rownames(sigtab_0.05_none_vs_multiple)
+sigtab_0.05_none_vs_multiple <- sigtab_0.05_none_vs_multiple[, c(14,1:13)]
+View(sigtab_0.05_none_vs_multiple) # 22 differential ASVs 
+
+write.table(sigtab_0.05_none_vs_multiple, "sigtab_0.05_none_vs_multiple.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = F) # Contains data for supplementary table S17
+
+diff_abund_none_vs_multiple_drugs <- sigtab_0.05_none_vs_multiple$ASV_ID
+
+
+## Making a Bar plot
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_none_vs_multiple)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p2 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("red", "light blue"), labels = c("multiple", "none")) +
+  xlab("ASV") + labs(fill = "Drug usage")
+p2 # Corresponds to 'Figure 7(B)' in manuscript
+
+
+### Differentially abundant ASVs 'single' vs 'multiple' groups
+NIH_micro_HIV_single_vs_multiple_drugs_ps <- subset_samples(NIH_micro_main_ps.new, (Drug_usage == "single" | Drug_usage == "multiple"))
+NIH_micro_HIV_single_vs_multiple_drugs_ps # 117 samples
+
+# DESeq2 comparison of no drugs vs multiple drug samples
+diagadds = phyloseq_to_deseq2(NIH_micro_HIV_single_vs_multiple_drugs_ps, ~Drug_usage)
+gm_mean = function(x, na.rm=TRUE) {
+  exp(sum(log(x[x > 0]), na.rm = na.rm) / length(x))
+}
+geoMeans = apply(counts(diagadds), 1, gm_mean)
+diagadds = estimateSizeFactors(diagadds, geoMeans = geoMeans)
+diagadds = DESeq(diagadds, fitType = "local") # carries out Benjamini-Hochberg multiple corrections within the DESEq function
+res_DESeq2 <- results(diagadds, cooksCutoff = FALSE)
+alpha = 0.05
+sigtab_0.05 <- res_DESeq2[which(res_DESeq2$padj < alpha), ] # only has the significantly differentially abundant ASVs
+sigtab_0.05_single_vs_multiple <- cbind(as(sigtab_0.05, "data.frame"), as(phyloseq::tax_table(NIH_micro_main_ps)[rownames(sigtab_0.05), ], "matrix"))
+sigtab_0.05_single_vs_multiple$ASV_ID <- rownames(sigtab_0.05_single_vs_multiple)
+sigtab_0.05_single_vs_multiple <- sigtab_0.05_single_vs_multiple[, c(14,1:13)]
+View(sigtab_0.05_single_vs_multiple) # 17 differential ASVs 
+
+write.table(sigtab_0.05_single_vs_multiple, "sigtab_0.05_single_vs_multiple.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = F) # Contains data for supplementary table S18
+
+diff_abund_single_vs_multiple_drugs <- sigtab_0.05_single_vs_multiple$ASV_ID
+
+
+## Making a Bar plot
+
+# prepare dataframe 
+new_df <- data.frame(t(sigtab_0.05_single_vs_multiple)) %>%
+  tidyr::fill(., names(.)) %>%
+  t()
+df_new <- as.data.frame(new_df)
+View(df_new)
+
+df_new$taxa_label <- paste(df_new$ASV_ID,df_new$Genus,sep = "_")
+
+df_new <- subset(df_new, select = c('ASV_ID','log2FoldChange','taxa_label'))
+is.data.frame(df_new)
+View(df_new)
+
+df_new$log2FoldChange <- as.numeric(as.character(df_new$log2FoldChange)) # convert to column 'log2FoldChange' to 'numeric'
+sapply(df_new, class)
+
+theme_set(theme_classic())
+p3 <- ggplot(df_new, aes(x=reorder(taxa_label,log2FoldChange) , y=log2FoldChange, fill=log2FoldChange>0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("red", "purple"), labels = c("multiple", "single")) +
+  xlab("ASV") + labs(fill = "Drug usage")
+p3 # Corresponds to 'Figure 7(C)' in manuscript
+```
+
+## Representation of core ASVs in HIV(-)/Injecting(-) (healthy group) in the other 3 groups ##
+
+```{r, echo=TRUE}
+# define core microbiota (80% of samples) for HIV(-)/Injecting(-) group
+no_HIV_not_injecting.ps <- subset_samples(NIH_micro_main_ps, Desc == "no_HIV_not_injecting")
+no_HIV_not_injecting.ps # 14 samples
+
+## Now let's identify the core ASVs
+prevdf_no_HIV_not_injecting = apply(X = otu_table(no_HIV_not_injecting.ps),
+               MARGIN = ifelse(taxa_are_rows(no_HIV_not_injecting.ps), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+prevdf_no_HIV_not_injecting = data.frame(Prevalence=prevdf_no_HIV_not_injecting, TotalAbundance=taxa_sums(no_HIV_not_injecting.ps))
+View(prevdf_no_HIV_not_injecting)
+
+core_threshold = nsamples(no_HIV_not_injecting.ps) * 0.8 
+core_threshold = 11 # 11.2 actual number
+
+# set threshold for the number of samples in which the ASV needs to be present in order for it to be considered as part of the core
+core_no_HIV_not_injecting <- rownames(prevdf_no_HIV_not_injecting)[prevdf_no_HIV_not_injecting$Prevalence >= core_threshold]
+no_HIV_not_injecting_core.ps <- prune_taxa(core_no_HIV_not_injecting, no_HIV_not_injecting.ps)
+no_HIV_not_injecting_core.ps # 33 core ASVs identified (482 total taxa)
+sum(otu_table(no_HIV_not_injecting_core.ps))/sum(otu_table(no_HIV_not_injecting.ps)) # accounts for 48.2% of reads
+
+## extracting taxonomic info for these ASVs
+taxa_cols <- colnames(phyloseq::tax_table(no_HIV_not_injecting_core.ps))
+taxa_table <- as.data.frame(phyloseq::tax_table(no_HIV_not_injecting_core.ps))
+dim(taxa_table)
+taxa_table$taxonomy <- do.call(paste, c(taxa_table[taxa_cols], sep = ";"))
+for (co in taxa_cols) taxa_table[co]<- NULL
+View(taxa_table)
+taxa_table$ASV_ID <- rownames(taxa_table)
+taxa_table_no_HIV_not_injecting_core <- taxa_table[,c(2,1)] # arrange table columns in order
+View(taxa_table_no_HIV_not_injecting_core)
+
+write.table(taxa_table_no_HIV_not_injecting_core, "taxa_table_no_HIV_not_injecting_core.txt", sep = "\t", col.names = TRUE, row.names = FALSE)
+
+### How are these core no_HIV_not_injecting group ASVs represented in the other 3 groups?
+
+## no_HIV_injecting group
+no_HIV_injecting.ps <- subset_samples(NIH_micro_main_ps, Desc == "no_HIV_injecting")
+no_HIV_injecting.ps # 65 samples
+
+# Now let's see how many ASVs are there
+prevdf_no_HIV_injecting = apply(X = otu_table(no_HIV_injecting.ps),
+               MARGIN = ifelse(taxa_are_rows(no_HIV_injecting.ps), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+prevdf_no_HIV_injecting = data.frame(Prevalence=prevdf_no_HIV_injecting, TotalAbundance=taxa_sums(no_HIV_injecting.ps))
+View(prevdf_no_HIV_injecting)
+
+# only retain ASVs found in at least one sample
+taxa_in_no_HIV_injecting <- rownames(prevdf_no_HIV_injecting)[prevdf_no_HIV_injecting$Prevalence >= 1]
+taxa_in_no_HIV_injecting # 717 
+
+# how many of the core no_HIV_not_injecting ASVs overlap with these ones?
+overlapping_healthy_with_no_HIV_injecting <- Reduce(intersect, list(core_no_HIV_not_injecting,taxa_in_no_HIV_injecting))
+
+overlapping_healthy_with_no_HIV_injecting # all 33 overlap
+
+# what percentage of reads are accounted for by these core no_HIV_not_injecting ASVs?
+healthy_no_HIV_injecting.ps <- prune_taxa(core_no_HIV_not_injecting,no_HIV_injecting.ps)
+healthy_no_HIV_injecting.ps
+
+sum(otu_table(healthy_no_HIV_injecting.ps))/sum(otu_table(no_HIV_injecting.ps)) # 40.55% of reads
+
+
+## HIV_injecting group
+HIV_injecting.ps <- subset_samples(NIH_micro_main_ps, Desc == "HIV_injecting")
+HIV_injecting.ps # 15 samples
+
+# Now let's see how many ASVs are there
+prevdf_HIV_injecting = apply(X = otu_table(HIV_injecting.ps),
+               MARGIN = ifelse(taxa_are_rows(HIV_injecting.ps), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+prevdf_HIV_injecting = data.frame(Prevalence=prevdf_HIV_injecting, TotalAbundance=taxa_sums(HIV_injecting.ps))
+View(prevdf_HIV_injecting)
+
+# only retain ASVs found in at least one sample
+taxa_in_HIV_injecting <- rownames(prevdf_HIV_injecting)[prevdf_HIV_injecting$Prevalence >= 1]
+taxa_in_HIV_injecting # 491 
+
+# how many of the core no_HIV_not_injecting ASVs overlap with these ones?
+overlapping_healthy_with_HIV_injecting <- Reduce(intersect, list(core_no_HIV_not_injecting,taxa_in_HIV_injecting))
+
+overlapping_healthy_with_HIV_injecting # all 33 overlap
+
+# what percentage of reads are accounted for by these core no_HIV_not_injecting ASVs?
+healthy_HIV_injecting.ps <- prune_taxa(core_no_HIV_not_injecting,HIV_injecting.ps)
+healthy_HIV_injecting.ps
+
+sum(otu_table(healthy_HIV_injecting.ps))/sum(otu_table(HIV_injecting.ps)) # 36.12% of reads
+
+
+## HIV_not_injecting group
+HIV_not_injecting.ps <- subset_samples(NIH_micro_main_ps, Desc == "HIV_not_injecting")
+HIV_not_injecting.ps # 74 samples
+
+# Now let's see how many ASVs are there
+prevdf_HIV_not_injecting = apply(X = otu_table(HIV_not_injecting.ps),
+               MARGIN = ifelse(taxa_are_rows(HIV_not_injecting.ps), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+prevdf_HIV_not_injecting = data.frame(Prevalence=prevdf_HIV_not_injecting, TotalAbundance=taxa_sums(HIV_not_injecting.ps))
+View(prevdf_HIV_not_injecting)
+
+# only retain ASVs found in at least one sample
+taxa_in_HIV_not_injecting <- rownames(prevdf_HIV_not_injecting)[prevdf_HIV_not_injecting$Prevalence >= 1]
+taxa_in_HIV_not_injecting # 744 taxa 
+
+# how many of the core no_HIV_not_injecting ASVs overlap with these ones?
+overlapping_healthy_with_HIV_not_injecting <- Reduce(intersect, list(core_no_HIV_not_injecting,taxa_in_HIV_not_injecting))
+
+overlapping_healthy_with_HIV_not_injecting # all 33 overlap
+
+# what percentage of reads are accounted for by these core no_HIV_not_injecting ASVs?
+healthy_HIV_not_injecting.ps <- prune_taxa(core_no_HIV_not_injecting,HIV_not_injecting.ps)
+healthy_HIV_not_injecting.ps
+
+sum(otu_table(healthy_HIV_not_injecting.ps))/sum(otu_table(HIV_not_injecting.ps)) # 33.15% of reads
+```
+
+
+### Calculating mean and standard deviation at phylum, family, and genus levels for each of the groups ###
+
+```{r, echo=TRUE}
+### at FAMILY level
+tb_NIH_micro_FAMILY <- tax_glom(NIH_micro_main_ps.prop, "Family")
+tb_NIH_micro_FAMILY_df <- psmelt(tb_NIH_micro_FAMILY) %>% as_tibble
+tb_NIH_micro_FAMILY_df_0 <- tb_NIH_micro_FAMILY_df %>% dplyr::group_by(Family, Desc) %>% dplyr::summarize(Mean = mean(Abundance), SD = sd(Abundance)) %>% ungroup
+tb_NIH_micro_FAMILY_df_0_rounded <- tb_NIH_micro_FAMILY_df_0 %>% mutate_at(vars("Mean", "SD"), list(~ round(., 4)))
+View(tb_NIH_micro_FAMILY_df_0_rounded)
+df_HIV_inj_FAMILY <- subset(tb_NIH_micro_FAMILY_df_0_rounded, Desc == "HIV_injecting")
+df_HIV_not_inj_FAMILY <- subset(tb_NIH_micro_FAMILY_df_0_rounded, Desc == "HIV_not_injecting")
+df_no_HIV_inj_FAMILY <- subset(tb_NIH_micro_FAMILY_df_0_rounded, Desc == "no_HIV_injecting")
+df_no_HIV_not_inj_FAMILY <- subset(tb_NIH_micro_FAMILY_df_0_rounded, Desc == "no_HIV_not_injecting")
+colnames(df_HIV_inj_FAMILY)[colnames(df_HIV_inj_FAMILY) == "Mean"] <- "Mean_HIV_inj" 
+colnames(df_HIV_inj_FAMILY)[colnames(df_HIV_inj_FAMILY) == "SD"] <- "SD_HIV_inj"
+colnames(df_HIV_not_inj_FAMILY)[colnames(df_HIV_not_inj_FAMILY) == "Mean"] <- "Mean_HIV_not_inj" 
+colnames(df_HIV_not_inj_FAMILY)[colnames(df_HIV_not_inj_FAMILY) == "SD"] <- "SD_HIV_not_inj"
+colnames(df_no_HIV_inj_FAMILY)[colnames(df_no_HIV_inj_FAMILY) == "Mean"] <- "Mean_no_HIV_inj" 
+colnames(df_no_HIV_inj_FAMILY)[colnames(df_no_HIV_inj_FAMILY) == "SD"] <- "SD_no_HIV_inj"
+colnames(df_no_HIV_not_inj_FAMILY)[colnames(df_no_HIV_not_inj_FAMILY) == "Mean"] <- "Mean_no_HIV_not_inj" 
+colnames(df_no_HIV_not_inj_FAMILY)[colnames(df_no_HIV_not_inj_FAMILY) == "SD"] <- "SD_no_HIV_not_inj"
+View(df_HIV_inj_FAMILY)
+View(df_HIV_not_inj_FAMILY)
+
+merged_df_1 <- merge(df_HIV_inj_FAMILY,df_HIV_not_inj_FAMILY, by="Family") # only accepts two arguments
+View(merged_df_1)
+
+merged_df_2 <- merge(df_no_HIV_inj_FAMILY,df_no_HIV_not_inj_FAMILY, by="Family") # only accepts two arguments
+View(merged_df_2)
+
+merged_df_family <- merge(merged_df_1, merged_df_2, by = "Family")
+View(merged_df_family) # Contains data used in the generation of supplementary table S1
+
+
+### at GENUS level
+tb_NIH_micro_GENUS <- tax_glom(NIH_micro_main_ps.prop, "Genus")
+tb_NIH_micro_GENUS_df <- psmelt(tb_NIH_micro_GENUS) %>% as_tibble
+tb_NIH_micro_GENUS_df_0 <- tb_NIH_micro_GENUS_df %>% dplyr::group_by(Genus, Desc) %>% dplyr::summarize(Mean = mean(Abundance), SD = sd(Abundance)) %>% ungroup
+tb_NIH_micro_GENUS_df_0_rounded <- tb_NIH_micro_GENUS_df_0 %>% mutate_at(vars("Mean", "SD"), list(~ round(., 4)))
+View(tb_NIH_micro_GENUS_df_0_rounded)
+df_HIV_inj_GENUS <- subset(tb_NIH_micro_GENUS_df_0_rounded, Desc == "HIV_injecting")
+df_HIV_not_inj_GENUS <- subset(tb_NIH_micro_GENUS_df_0_rounded, Desc == "HIV_not_injecting")
+df_no_HIV_inj_GENUS <- subset(tb_NIH_micro_GENUS_df_0_rounded, Desc == "no_HIV_injecting")
+df_no_HIV_not_inj_GENUS <- subset(tb_NIH_micro_GENUS_df_0_rounded, Desc == "no_HIV_not_injecting")
+colnames(df_HIV_inj_GENUS)[colnames(df_HIV_inj_GENUS) == "Mean"] <- "Mean_HIV_inj" 
+colnames(df_HIV_inj_GENUS)[colnames(df_HIV_inj_GENUS) == "SD"] <- "SD_HIV_inj"
+colnames(df_HIV_not_inj_GENUS)[colnames(df_HIV_not_inj_GENUS) == "Mean"] <- "Mean_HIV_not_inj" 
+colnames(df_HIV_not_inj_GENUS)[colnames(df_HIV_not_inj_GENUS) == "SD"] <- "SD_HIV_not_inj"
+colnames(df_no_HIV_inj_GENUS)[colnames(df_no_HIV_inj_GENUS) == "Mean"] <- "Mean_no_HIV_inj" 
+colnames(df_no_HIV_inj_GENUS)[colnames(df_no_HIV_inj_GENUS) == "SD"] <- "SD_no_HIV_inj"
+colnames(df_no_HIV_not_inj_GENUS)[colnames(df_no_HIV_not_inj_GENUS) == "Mean"] <- "Mean_no_HIV_not_inj" 
+colnames(df_no_HIV_not_inj_GENUS)[colnames(df_no_HIV_not_inj_GENUS) == "SD"] <- "SD_no_HIV_not_inj"
+View(df_HIV_inj_GENUS)
+View(df_HIV_not_inj_GENUS)
+
+merged_df_1 <- merge(df_HIV_inj_GENUS,df_HIV_not_inj_GENUS, by="Genus") # only accepts two arguments
+View(merged_df_1)
+
+merged_df_2 <- merge(df_no_HIV_inj_GENUS,df_no_HIV_not_inj_GENUS, by="Genus") # only accepts two arguments
+View(merged_df_2)
+
+merged_df_genus <- merge(merged_df_1, merged_df_2, by = "Genus")
+View(merged_df_genus) # Contains data used in the generation of supplementary table S2
+```

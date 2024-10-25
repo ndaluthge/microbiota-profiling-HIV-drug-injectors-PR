@@ -1,0 +1,205 @@
+PrimerNumber	SampleNumber	Primer_Well	DNA_Well	Well_type	SampleID	Date_Received	Time	AM_PM	Injecting_status 	HIV_status	Desc	urinePos	Drug_usage	Gender	Misc
+205	70	NA	NA	sample	A1100	3/4/20	10:20 AM	AM	injecting	HIV_negative	no_HIV_injecting	no_info	no_info	no_info	no_info
+217	71	NA	NA	sample	A1300	10/13/20	10:45 AM	AM	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+98	98	A2	A2	sample	A1300	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+14	14	B2	B2	sample	A1503	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+193	69	NA	NA	sample	A3011	11/18/20	11:10 AM	AM	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+313	25	C7	C1	sample	A3070	2/17/21	9:00	AM	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+153	153	E9	E9	sample	A3070	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+121	121	C1	C1	sample	A3071	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	7	multiple	Female	no_info
+314	26	C8	C2	sample	A3080	2/18/21	12:30	PM	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+119	119	B11	B11	sample	A3081	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	6	multiple	Male	no_info
+335	47	F2	D11	sample	A3130	4/20/21	10:40	AM	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+115	115	B7	B7	sample	A3130	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+339	51	F6	E3	sample	A3132	4/21/21	11:45	AM	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+355	67	H4	F7	sample	A3133	5/12/21	12:02	PM	injecting	HIV_negative	no_HIV_injecting	2	multiple	Male	no_info
+19	19	B7	B7	sample	A3134	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Male	no_info
+140	140	D8	D8	sample	A3140	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+343	55	G1	E7	sample	A3180	4/27/21	8:00	AM	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+346	58	G4	E10	sample	A3181	4/27/21	10:30	AM	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+342	54	F9	E6	sample	A3182	4/26/21	11:50	AM	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+348	60	G6	E12	sample	A3183	4/29/21	10:30	AM	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+159	159	F3	F3	sample	A3183	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+11	11	A11	A11	sample	A3184	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+1	1	A1	A1	sample	A3185	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+107	107	A11	A11	sample	A3185	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+2	2	A2	A2	sample	A3186	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+10	10	A10	A10	sample	A3188	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+350	62	G8	F2	sample	A3191	5/3/21	10:40	AM	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+15	15	B3	B3	sample	A3220	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+135	135	D3	D3	sample	A3252	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+23	23	B11	B11	sample	A3330	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Male	no_info
+25	25	C1	C1	sample	A3335	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Male	no_info
+16	16	B4	B4	sample	A3341	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Female	no_info
+27	27	C3	C3	sample	A3370	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+26	26	C2	C2	sample	A3371	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+28	28	C4	C4	sample	A3401	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+32	32	C8	C8	sample	A3415	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+130	130	C10	C10	sample	A3420	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+161	161	F5	F5	sample	A3421	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	0	none	Female	no_info
+157	157	F1	F1	sample	A3438	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+124	124	C4	C4	sample	A3440	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+167	167	F11	F11	sample	A3480	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Male	no_info
+163	163	F7	F7	sample	A3495	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+105	105	A9	A9	sample	A3541 	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+106	106	A10	A10	sample	A3542	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+133	133	D1	D1	sample	A3611	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Male	no_info
+242	81	NA	NA	sample	A4001	10/27/20	6:30 AM	AM	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+278	84	NA	NA	sample	A4002	11/17/20	10:00 AM	AM	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+219	87	NA	NA	sample	A4003	11/17/20	11:30 AM	AM	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+332	44	E8	D8	sample	A4062	4/15/21	11:35	AM	injecting	HIV_negative	no_HIV_injecting	0	none	Male	no_info
+142	142	D10	D10	sample	A4062	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	0	none	Male	no_info
+341	53	F8	E5	sample	A4070	4/22/21	11:00	AM	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+164	164	F8	F8	sample	A4100	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+158	158	F2	F2	sample	A4101	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	5	multiple	Female	no_info
+156	156	E12	E12	sample	A4103	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	5	multiple	Female	no_info
+165	165	F9	F9	sample	A4104	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	no_info	no_info	no_info	no_info
+125	125	C5	C5	sample	A4112	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	4	multiple	Male	no_info
+3	3	A3	A3	sample	A5050	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Female	no_info
+109	109	B1	B1	sample	A5050	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	2	multiple	Female	no_info
+298	10	B1	A10	sample	A5112	1/19/21	no_time	no_time	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+147	147	E3	E3	sample	A5112	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+315	27	C9	C3	sample	A5181	2/22/21	11:20	AM	injecting	HIV_negative	no_HIV_injecting	2	multiple	Female	no_info
+329	41	E5	D5	sample	A5360	4/8/21	11:10	AM	injecting	HIV_negative	no_HIV_injecting	6	multiple	Male	no_info
+330	42	E6	D6	sample	A5361	4/8/21	1:20	PM	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+334	46	F1	D10	sample	A5365	4/20/21	11:12	AM	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+338	50	F5	E2	sample	A5367	4/21/21	10:00	AM	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+345	57	G3	E9	sample	A5368	4/27/21	8:00	AM	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+122	122	C2	C2	sample	A5368	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Male	no_info
+340	52	F7	E4	sample	A5369	4/22/21	10:30	AM	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	tube says 4-21-21 but sheet says 4-22-21
+108	108	A12	A12	sample	A5369	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	5	multiple	Male	no_info
+127	127	C7	C7	sample	A5386 	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	3	multiple	Male	no_info
+166	166	F10	F10	sample	A5388	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Female	no_info
+347	59	G5	E11	sample	A5391	4/28/21	2:00	PM	injecting	HIV_negative	no_HIV_injecting	0	none	Male	no_info
+132	132	C12	C12	sample	A5410	fill_later	fill_later	fill_later	injecting	HIV_negative	no_HIV_injecting	1	single	Transgender	no_info
+352	64	H1	F4	sample	L7000	5/4/21	1:00	PM	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Male	tube says 5-3-21 but sheet says 5-4-21
+349	61	G7	F1	sample	L7001	4/29/21	10:20	AM	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+351	63	G9	F3	sample	L7002	5/4/21	8:30	AM	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+353	65	H2	F5	sample	L7003	5/4/21	8:50	AM	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+356	68	H5	F8	sample	L7004	5/12/21	11:40	AM	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+5	5	A5	A5	sample	L7005	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	1	single	Female	no_info
+6	6	A6	A6	sample	L7006	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+8	8	A8	A8	sample	L7007	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+7	7	A7	A7	sample	L7008	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+9	9	A9	A9	sample	L7009	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Female	no_info
+13	13	B1	B1	sample	L7010	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Male	no_info
+21	21	B9	B9	sample	L7011	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Male	no_info
+22	22	B10	B10	sample	L7012	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	1	single	Female	no_info
+24	24	B12	B12	sample	L7013	fill_later	fill_later	fill_later	not_injecting	HIV_negative	no_HIV_not_injecting	0	none	Male	no_info
+318	30	D3	C6	sample	messed_up_entirely_disregard	messed_up_entirely_disregard	messed_up_entirely_disregard	messed_up_entirely_disregard	NA	NA	disregard	disregard	disregard	disregard	messed_up_entirely_disregard
+231	88	NA	NA	NC	NC	NC	NC	NC	NA	NA	empty_wells	NA	NA	NA	empty_wells
+243	89	NA	NA	NC	NC	NC	NC	NC	NA	NA	empty_wells	NA	NA	NA	empty_wells
+255	90	NA	NA	NC	NC	NC	NC	NC	NA	NA	empty_wells	NA	NA	NA	empty_wells
+267	91	NA	NA	NC	NC	NA	NA	NA	NA	NA	empty_wells	NA	NA	NA	empty_wells
+279	92	NA	NA	NC	NC	NA	NA	NA	NA	NA	empty_wells	NA	NA	NA	empty_wells
+143	143	D11	D11	NC	NC	fill_later	fill_later	fill_later	NA	NA	neg_control	NA	NA	NA	no_info
+144	144	D12	D12	NC	NC	fill_later	fill_later	fill_later	NA	NA	neg_control	NA	NA	NA	no_info
+168	168	F12	F12	NC	NC	fill_later	fill_later	fill_later	NA	NA	neg_control	NA	NA	NA	no_info
+169	169	G1	G1	NC	NC	fill_later	fill_later	fill_later	NA	NA	neg_control	NA	NA	NA	no_info
+170	170	G2	G2	NC	NC	fill_later	fill_later	fill_later	NA	NA	neg_control	NA	NA	NA	no_info
+292	4	A4	A4	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+323	35	D8	C11	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+325	37	E1	D1	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+TD12	12	A12	A12	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+TD17	17	B5	B5	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+TD31	31	C7	C7	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+12	12	A12	A12	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+17	17	B5	B5	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+31	31	C7	C7	NC	Neg	NC	NC	NC	NA	NA	neg_control	NA	NA	NA	no_info
+297	9	A9	A9	PC	PC	PC	PC	PC	NA	NA	POS	NA	NA	NA	no_info
+327	39	E3	D3	PC	PC	PC	PC	PC	NA	NA	POS	NA	NA	NA	no_info
+171	171	G3	G3	PC	PC	fill_later	fill_later	fill_later	NA	NA	POS	NA	NA	NA	no_info
+172	172	G4	G4	PC	PC	fill_later	fill_later	fill_later	NA	NA	POS	NA	NA	NA	no_info
+173	173	G5	G5	PC	PC	fill_later	fill_later	fill_later	NA	NA	POS	NA	NA	NA	no_info
+241	73	NA	NA	sample	R1400	10/22/20	9:50 AM	AM	injecting	HIV_positive	HIV_injecting	5	multiple	Male	no_info
+30	30	C6	C6	sample	R1401	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	1	single	Male	no_info
+331	43	E7	D7	sample	R3110	4/14/21	11:05	TOD not given	injecting	HIV_positive	HIV_injecting	3	multiple	Male	no_info
+134	134	D2	D2	sample	R3136	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	0	none	Female	no_info
+29	29	C5	C5	sample	R3410	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	0	none	Male	no_info
+137	137	D5	D5	sample	R3414	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	1	single	Male	no_info
+97	97	A1	A1	sample	R3571	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	1	single	Male	no_info
+333	45	E9	D9	sample	R4061	4/15/21	10:20	AM	injecting	HIV_positive	HIV_injecting	1	single	Male	no_info
+128	128	C8	C8	sample	R4097	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	2	multiple	Male	no_info
+139	139	D7	D7	sample	R4102	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	0	none	Male	no_info
+253	74	NA	NA	sample	R5010	12/7/20	8:59 AM	AM	injecting	HIV_positive	HIV_injecting	2	multiple	Male	no_info
+207	86	NA	NA	sample	R5011	12/3/20	7:50	NA	injecting	HIV_negative	no_HIV_injecting	no_info	no_info	no_info	correct id might be R-5011
+265	75	NA	NA	sample	R5014	12/7/20	8:58 AM	AM	injecting	HIV_positive	HIV_injecting	1	single	Female	no_info
+310	22	C4	B10	sample	R5180	2/10/21	10:30	AM	injecting	HIV_positive	HIV_injecting	5	multiple	Male	no_info
+307	19	C1	B7	sample	R5193	2/4/21	8:30	PM	injecting	HIV_positive	HIV_injecting	3	multiple	Male	no_info
+117	117	B9	B9	sample	R5193 	fill_later	fill_later	fill_later	injecting	HIV_positive	HIV_injecting	3	multiple	Male	no_info
+229	72	NA	NA	sample	V1301	11/6/20	9:00 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+150	150	E6	E6	sample	V1301	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+266	83	NA	NA	sample	V1500	10/15/20	10:30 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+146	146	E2	E2	sample	V1500	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+294	6	A6	A6	sample	V1501	1/12/21	12:28	PM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Transgender	no_info
+151	151	E7	E7	sample	V1501	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Transgender	no_info
+123	123	C3	C3	sample	V1502	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+337	49	F4	E1	sample	V1502	4/20/21	3:04	PM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	tube says 4-19-21 but sheet says 4-2021
+138	138	D6	D6	sample	V1503	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	no_info	no_info	no_info	no_info
+206	78	NA	NA	sample	V3003	11/9/20	11:40 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+218	79	NA	NA	sample	V3003	11/9/20	11:50 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+104	104	A8	A8	sample	V3003	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+277	76	NA	NA	sample	V3004	11/9/20	11:30 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	no_info
+100	100	A4	A4	sample	V3004	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	no_info
+149	149	E5	E5	sample	V3007	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+230	80	NA	NA	sample	V3007	12/2/20	7:00 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+254	82	NA	NA	sample	V3050	12/1/20	7:20 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+148	148	E4	E4	sample	V3050	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	no_info
+131	131	C11	C11	sample	V3110	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	no_info	no_info	no_info	no_info
+344	56	G2	E8	sample	V3131	4/27/21	1:00	PM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	tube says4-26-21 but sheet says 4-27-21 (correct id might also be V3131)
+162	162	F6	F6	sample	V3137	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+20	20	B8	B8	sample	V3180	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	no_info	no_info	no_info	no_info
+160	160	F4	F4	sample	V3412	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	no_info
+126	126	C6	C6	sample	V3490	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+129	129	C9	C9	sample	V4090	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	no_info	no_info	no_info	Duplicate sample - instructed to remove
+103	103	A7	A7	sample	V4091	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+118	118	B10	B10	sample	V4092	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	5	multiple	Male	no_info
+141	141	D9	D9	sample	V4105	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+195	85	NA	NA	sample	V5012	12/3/20	11:05 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+194	77	NA	NA	sample	V5013	12/3/20	7:30 AM	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+289	1	A1	A1	sample	V5020	12/15/20	9:25	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+145	145	E1	E1	sample	V5020	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+293	5	A5	A5	sample	V5021	1/7/21	10:05	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+101	101	A5	A5	sample	V5021	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+4	4	A4	A4	sample	V5051	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+290	2	A2	A2	sample	V5080	12/17/20	7:05	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+114	114	B6	B6	sample	V5080	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+291	3	A3	A3	sample	V5081	12/22/20	11:40	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Male	no_info
+295	7	A7	A7	sample	V5110	1/14/21	10:00	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Transgender	no_info
+296	8	A8	A8	sample	V5111	1/19/21	no_time	no_time	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+112	112	B4	B4	sample	V5111 	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+301	13	B4	B1	sample	V5113	2/1/21	9:00	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+110	110	B2	B2	sample	V5113	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+302	14	B5	B2	sample	V5114	2/1/21	8:30	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+116	116	B8	B8	sample	V5114	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+303	15	B6	B3	sample	V5115	2/2/21	8:30	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+113	113	B5	B5	sample	V5115	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+299	11	B2	A11	sample	V5130	1/20/21	9:40	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Transgender	no_info
+300	12	B3	A12	sample	V5134	1/28/21	10:15	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Transgender	no_info
+111	111	B3	B3	sample	V5134	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Transgender	no_info
+308	20	C2	B8	sample	V5170	2/9/21	9:00	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+319	31	D4	C7	sample	V5181	3/3/21	9:55	AM	not_injecting	HIV_positive	HIV_not_injecting	no_info	no_info	no_info	no_info
+304	16	B7	B4	sample	V5190	2/2/21	8:45	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+305	17	B8	B5	sample	V5191	2/3/21	10:00	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+306	18	B9	B6	sample	V5192	2/4/21	8:30	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Female	no_info
+311	23	C5	B11	sample	V5194	2/10/21	9:15	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+136	136	D4	D4	sample	V5194	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+309	21	C3	B9	sample	V5211	2/9/21	10:55	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+336	48	F3	D12	sample	V5212	4/20/21	9:50	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+154	154	E10	E10	sample	V5212	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Female	no_info
+316	28	D1	C4	sample	V5250	2/25/21	9:30	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+312	24	C6	B12	sample	V5252	2/16/21	9:00	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+317	29	D2	C5	sample	V5270	3/1/21	10:45	PM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+120	120	B12	B12	sample	V5270	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+320	32	D5	C8	sample	V5282	3/10/21	9:30	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+324	36	D9	C12	sample	V5300	3/23/21	8:00	AM	not_injecting	HIV_positive	HIV_not_injecting	2	multiple	Other	no_info
+326	38	E2	D2	sample	V5301	3/24/21	8:00	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+328	40	E4	D4	sample	V5302	3/24/21	12:15	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+322	34	D7	C10	sample	V5303	3/18/21	10:50	AM	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
+321	33	D6	C9	sample	V5304	3/15/21	7:30	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	Tube says 3-10-21 but paper sheet says 3-15-21
+18	18	B6	B6	sample	V5373	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+354	66	H3	F6	sample	V5380	5/5/21	8:00	AM	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+102	102	A6	A6	sample	V5460	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Male	no_info
+99	99	A3	A3	sample	V5510	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+152	152	E8	E8	sample	V5540	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	0	none	Female	no_info
+155	155	E11	E11	sample	V5560	fill_later	fill_later	fill_later	not_injecting	HIV_positive	HIV_not_injecting	1	single	Male	no_info
